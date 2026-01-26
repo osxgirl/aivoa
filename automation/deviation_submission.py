@@ -31,7 +31,7 @@ password_field = wait.until(
         (By.XPATH, "//input[@type='password']")
     )
 )
-password_field.send_keys("password123")
+password_field.send_keys("1234567notthepaswordhaha")
 
 # 5. Click Login
 submit_btn = wait.until(
