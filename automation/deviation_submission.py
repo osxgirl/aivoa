@@ -1,3 +1,9 @@
+from dotenv import load_dotenv
+load_dotenv()
+
+import time
+import os
+
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
@@ -6,9 +12,7 @@ from webdriver_manager.firefox import GeckoDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
-import time
-import os
-password.send_keys(os.getenv("AIVOA_PASSWORD"))
+
 
 # --- Browser setup ---
 options = Options()
@@ -32,17 +36,27 @@ driver.get("http://216.48.184.249:5289/login")
 email = wait.until(EC.visibility_of_element_located(
     (By.XPATH, "//input[@placeholder='name@company.com']")
 ))
-email.send_keys(os.getenv("AIVOA_EMAIL", "testing@aivoa.net"))
+email.send_keys(os.getenv("AIVOA_EMAIL"))
 
 password = wait.until(EC.visibility_of_element_located(
     (By.XPATH, "//input[@type='password']")
 ))
-password.send_keys(os.getenv("AIVOA_PASSWORD", "dummy_password"))
+
+password_value = os.getenv("AIVOA_PASSWORD")
+if not password_value:
+    raise ValueError("AIVOA_PASSWORD not loaded")
+
+password.send_keys(password_value)
 
 login_btn = wait.until(EC.element_to_be_clickable(
     (By.XPATH, "//button[@type='submit']")
 ))
+
 driver.execute_script("arguments[0].click();", login_btn)
+
+# IMPORTANT: wait for redirect after login
+wait.until(EC.url_contains("/quality"))
+
 
 # --- Navigate ---
 driver.get(
