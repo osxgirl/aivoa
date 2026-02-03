@@ -89,9 +89,38 @@ Select(driver.find_element(By.ID, "department_owner")) \
 # Intentionally skipping product impact checkbox
 # Default unchecked state is correct for this scenario
 
+#Checkboxes
+
+material_xpath = "//*[normalize-space()='Material / Batch']/ancestor::div[contains(@class,'cursor-pointer')][1]"
+
+material_batch = wait.until(
+    EC.element_to_be_clickable((By.XPATH, material_xpath))
+)
+
+driver.execute_script("arguments[0].click();", material_batch)
+
+# 🔥 WAIT for the UI state to settle
+wait.until(
+    EC.presence_of_element_located((
+        By.XPATH,
+        material_xpath + "[contains(@class,'bg-violet')]"
+    ))
+)
+
+checkbox = driver.find_element(
+    By.XPATH,
+    "//input[@type='checkbox' and @name='material_batch']"
+)
+driver.execute_script("arguments[0].click();", checkbox)
+
+
+wait.until(lambda d: d.execute_script("return document.readyState") == "complete")
+time.sleep(0.5)  # yes, intentional — React is async chaos
+
 submit = wait.until(EC.element_to_be_clickable(
     (By.XPATH, "//button[contains(text(),'Submit')]")
 ))
+
 driver.execute_script("arguments[0].click();", submit)
 
 time.sleep(3)
