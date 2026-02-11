@@ -52,11 +52,16 @@ login_btn = wait.until(EC.element_to_be_clickable(
     (By.XPATH, "//button[@type='submit']")
 ))
 
+#This ensures Selenium is bound to an active window
+wait.until(lambda d: d.execute_script("return window.location.href") is not None)
+
 driver.execute_script("arguments[0].click();", login_btn)
 
 # IMPORTANT: wait for redirect after login
 wait.until(EC.url_contains("/quality"))
 
+# give React router time to fully settle
+time.sleep(1)
 
 # --- Navigate ---
 driver.get(
@@ -64,63 +69,55 @@ driver.get(
 )
 
 # --- Form ---
-desc = wait.until(EC.presence_of_element_located(
-    (By.NAME, "short_description_of_event")
+# --- Impact checkbox ---
+# --- Wait for form to be fully mounted ---
+wait.until(lambda d: d.execute_script("""
+    return document.readyState === 'complete'
+"""))
+
+wait.until(lambda d: d.execute_script("""
+    return document.querySelectorAll('input').length > 0
+"""))
+
+time.sleep(0.5)  # hydration buffer
+
+
+# --- Short description ---
+wait.until(lambda d: d.execute_script(
+    "return document.getElementById('short_description_of_event') !== null"
 ))
-desc.send_keys(
-    "Temperature excursion observed during raw material storage. No adverse product impact identified."
+
+desc = driver.execute_script(
+    "return document.getElementById('short_description_of_event')"
 )
 
-criticality = Select(wait.until(
-    EC.element_to_be_clickable((By.ID, "preliminary_criticality"))
-))
-criticality.select_by_visible_text("Major - Escalate to Management")
-
-wait.until(lambda d: len(
-    Select(d.find_element(By.ID, "source_of_event")).options
-) > 1)
-
-Select(driver.find_element(By.ID, "source_of_event")) \
-    .select_by_visible_text("Production / Manufacturing")
-
-Select(driver.find_element(By.ID, "department_owner")) \
-    .select_by_visible_text("Production")
-
-# Intentionally skipping product impact checkbox
-# Default unchecked state is correct for this scenario
-
-#Checkboxes
-
-material_xpath = "//*[normalize-space()='Material / Batch']/ancestor::div[contains(@class,'cursor-pointer')][1]"
-
-material_batch = wait.until(
-    EC.element_to_be_clickable((By.XPATH, material_xpath))
+driver.execute_script(
+    """
+    arguments[0].value = arguments[1];
+    arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+    arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+    """,
+    desc,
+    "Temperature excursion observed during raw material storage."
 )
 
-driver.execute_script("arguments[0].click();", material_batch)
+# --- Dropdowns ---
+Select(wait.until(EC.element_to_be_clickable(
+    (By.ID, "preliminary_criticality")
+))).select_by_visible_text("Major - Escalate to Management")
 
-# 🔥 WAIT for the UI state to settle
-wait.until(
-    EC.presence_of_element_located((
-        By.XPATH,
-        material_xpath + "[contains(@class,'bg-violet')]"
-    ))
-)
+Select(wait.until(EC.element_to_be_clickable(
+    (By.ID, "source_of_event")
+))).select_by_visible_text("Production / Manufacturing")
 
-checkbox = driver.find_element(
-    By.XPATH,
-    "//input[@type='checkbox' and @name='material_batch']"
-)
-driver.execute_script("arguments[0].click();", checkbox)
+Select(wait.until(EC.element_to_be_clickable(
+    (By.ID, "department_owner")
+))).select_by_visible_text("Production")
 
-
-wait.until(lambda d: d.execute_script("return document.readyState") == "complete")
-time.sleep(0.5)  # yes, intentional — React is async chaos
-
+# --- Submit ---
 submit = wait.until(EC.element_to_be_clickable(
-    (By.XPATH, "//button[contains(text(),'Submit')]")
+    (By.XPATH, "//button[@type='submit']")
 ))
-
 driver.execute_script("arguments[0].click();", submit)
 
 time.sleep(3)
